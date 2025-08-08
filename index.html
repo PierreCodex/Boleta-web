@@ -15,6 +15,16 @@
     body {
       font-family: Arial, sans-serif;
     }
+
+    /* Ajustes para mejorar la visualización en dispositivos móviles */
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+      .table th, .table td {
+        padding: 8px;
+      }
+    }
   </style>
 </head>
 <body class="bg-light p-4">
@@ -51,7 +61,7 @@
 
     <!-- Detalle de la boleta (Tabla) -->
     <h2 class="mt-5">Detalle de la Compra</h2>
-    <table id="tablaProductos" class="table table-striped">
+    <table id="tablaProductos" class="table table-striped table-responsive">
       <thead>
         <tr>
           <th>Producto</th>
@@ -110,14 +120,25 @@
 
       let importe = 0;
 
-      // Calcular el importe dependiendo del tipo de medida
-      if (tipoMedida === 'peso' || tipoMedida === 'unidad') {
-        // Si el producto es por peso (kg) o por unidad, multiplicamos cantidad por precio unitario
-        importe = cantidad * precioUnitario;
-      } else if (tipoMedida === 'importe') {
-        // Si es un importe personalizado, el importe es igual a la cantidad (pago total)
-        importe = cantidad;
-      }
+     // Calcular el importe dependiendo del tipo de medida
+  if (tipoMedida === 'peso' || tipoMedida === 'unidad') {
+    // Si el producto es por peso (kg) o por unidad, multiplicamos cantidad por precio unitario
+    importe = cantidad * precioUnitario;
+    
+    // Redondeo según las condiciones:
+    let decimal = (importe % 1).toFixed(2); // Obtener la parte decimal de importe
+
+    if (parseFloat(decimal) >= 0.50) {
+      // Si el decimal es mayor o igual a 0.50, redondeamos hacia arriba
+      importe = Math.ceil(importe * 10) / 10;  // Redondeamos al siguiente decimal
+    } else {
+      // Si el decimal es menor a 0.50, redondeamos hacia abajo
+      importe = Math.floor(importe * 10) / 10;  // Redondeamos hacia abajo
+    }
+  } else if (tipoMedida === 'importe') {
+    // Si es un importe personalizado, el importe es igual a la cantidad (pago total)
+    importe = cantidad;
+  }
 
       // Si es un importe personalizado, ponemos el precio unitario a 0
       if (tipoMedida === 'importe') {
