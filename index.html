@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boleta de Compra</title>
+  <!-- Enlace a Bootstrap -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Incluir pdfmake -->
+  <script src="./pdfmake/build/pdfmake.min.js"></script>
+  <script src="./pdfmake/build/vfs_fonts.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-light p-4">
+
+  <div class="container bg-white p-5 shadow rounded-lg">
+    <h1 class="text-center mb-4">Boleta de Compra</h1>
+
+    <!-- Formulario para agregar productos -->
+    <div class="form-group">
+      <label for="producto">Producto</label>
+      <input type="text" id="producto" class="form-control" placeholder="Nombre del producto" />
+    </div>
+
+    <div class="form-group">
+      <label for="tipoMedida">Tipo de Medida</label>
+      <select id="tipoMedida" class="form-control" onchange="mostrarCamposDinamicos()">
+        <option value="unidad">Unidad</option>
+        <option value="peso">Peso (kg)</option>
+        <option value="importe">Importe personalizado</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="cantidadCampo">
+      <label for="cantidad">Cantidad</label>
+      <input type="number" id="cantidad" class="form-control" placeholder="Cantidad" step="any" />
+    </div>
+
+    <div class="form-group" id="precioUnitarioDiv">
+      <label for="precioUnitario">Precio Unitario (S/)</label>
+      <input type="number" id="precioUnitario" class="form-control" placeholder="Precio por unidad o kg" step="any" />
+    </div>
+
+    <button onclick="agregarProducto()" class="btn btn-primary btn-block">Agregar Producto</button>
+
+    <!-- Detalle de la boleta (Tabla) -->
+    <h2 class="mt-5">Detalle de la Compra</h2>
+    <table id="tablaProductos" class="table table-striped">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>Unidad</th>
+          <th>Precio Unit.</th>
+          <th>Subtotal</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="listaProductos">
+        <!-- Aquí se listarán los productos agregados -->
+      </tbody>
+    </table>
+
+    <div class="mt-3 text-right font-weight-bold">
+      Total: S/ <span id="totalCompra">0.00</span>
+    </div>
+
+    <button onclick="generarPDF()" class="btn btn-success btn-block mt-4">Generar Boleta</button>
+  </div>
+
+  <!-- Script para funcionalidad -->
+  <script>
+    let productos = []; // Aquí guardamos los productos agregados
+
+    // Función para mostrar los campos dinámicos según el tipo de medida
+    function mostrarCamposDinamicos() {
+      const tipoMedida = document.getElementById('tipoMedida').value;
+
+      // Ocultar todos los campos de cantidad y precio unitario
+      document.getElementById('cantidadCampo').style.display = 'none';
+      document.getElementById('precioUnitarioDiv').style.display = 'none';
+
+      if (tipoMedida === 'peso') {
+        // Mostrar campo de cantidad (peso en kg) y precio unitario
+        document.getElementById('cantidadCampo').style.display = 'block';
+        document.getElementById('precioUnitarioDiv').style.display = 'block';
+      } else if (tipoMedida === 'unidad') {
+        // Mostrar solo campo de cantidad (unidades) y precio unitario
+        document.getElementById('cantidadCampo').style.display = 'block';
+        document.getElementById('precioUnitarioDiv').style.display = 'block';
+      } else if (tipoMedida === 'importe') {
+        // Mostrar solo campo de cantidad (importe total) y quitar precio unitario
+        document.getElementById('cantidadCampo').style.display = 'block';
+        document.getElementById('precioUnitarioDiv').style.display = 'none';
+      }
+    }
+
+    // Función para agregar un producto a la lista
+    function agregarProducto() {
+      const producto = document.getElementById('producto').value;
+      const tipoMedida = document.getElementById('tipoMedida').value;
+      const cantidad = parseFloat(document.getElementById('cantidad').value);
+      const precioUnitario = parseFloat(document.getElementById('precioUnitario').value);
+
+      let importe = 0;
+
+      // Calcular el importe dependiendo del tipo de medida
+      if (tipoMedida === 'peso' || tipoMedida === 'unidad') {
+        // Si el producto es por peso (kg) o por unidad, multiplicamos cantidad por precio unitario
+        importe = cantidad * precioUnitario;
+      } else if (tipoMedida === 'importe') {
+        // Si es un importe personalizado, el importe es igual a la cantidad (pago total)
+        importe = cantidad;
+      }
+
+      // Si es un importe personalizado, ponemos el precio unitario a 0
+      if (tipoMedida === 'importe') {
+        document.getElementById('precioUnitario').value = 0;
+      }
+
+      // Guardar el producto
+      productos.push({ producto, tipoMedida, cantidad, precioUnitario, importe });
+
+      // Limpiar los campos después de agregar el producto
+      limpiarFormulario();
+
+      // Actualizar la vista de productos
+      actualizarDetalleCompra();
+    }
+
+    // Función para actualizar el detalle de la compra y total
+    function actualizarDetalleCompra() {
+      let total = 0;
+      let listaHTML = '';
+
+      productos.forEach((prod, index) => {
+        listaHTML += `
+          <tr>
+            <td>${prod.producto}</td>
+            <td>${prod.cantidad}</td>
+            <td>${prod.tipoMedida}</td>
+            <td>S/ ${prod.precioUnitario ? prod.precioUnitario.toFixed(2) : ''}</td>
+            <td>S/ ${prod.importe.toFixed(2)}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="eliminarProducto(${index})">Eliminar</button></td>
+          </tr>
+        `;
+        total += prod.importe;
+      });
+
+      document.getElementById('listaProductos').innerHTML = listaHTML;
+      document.getElementById('totalCompra').innerText = total.toFixed(2);
+    }
+
+    // Función para eliminar un producto de la lista
+    function eliminarProducto(index) {
+      productos.splice(index, 1);
+      actualizarDetalleCompra();
+    }
+
+    // Función para limpiar los campos de texto
+    function limpiarFormulario() {
+      document.getElementById('producto').value = '';
+      document.getElementById('cantidad').value = '';
+      document.getElementById('precioUnitario').value = '';
+    }
+
+    // Función para generar la boleta en formato PDF usando pdfmake
+    function generarPDF() {
+      const docDefinition = {
+        content: [
+          { text: 'ECL FRUVER', fontSize: 18, bold: true, alignment: 'center' },
+          { text: 'CALLE 52 SUR # 70 - 90', fontSize: 12, alignment: 'center' },
+          { text: 'Tel: 312 888 0719', fontSize: 12, alignment: 'center' },
+          { text: 'NIT: 1128480388', fontSize: 12, alignment: 'center' },
+          { text: '\n' },  // Espacio entre los elementos
+          { text: 'Factura #: 53', fontSize: 12, bold: true },
+          { text: 'Fecha: ' + new Date().toLocaleString(), fontSize: 12 },
+          { text: '\n' },
+
+          // Tabla de productos
+          {
+            table: {
+              headerRows: 1,
+              body: [
+                ['Producto', 'Cant.', 'Precio', 'Total'], // Cabecera
+                ...productos.map(prod => [
+                  prod.producto,
+                  `${prod.cantidad} ${prod.tipoMedida === 'peso' ? 'kg' : 'und'}`,
+                  `S/ ${prod.precioUnitario ? prod.precioUnitario.toFixed(2) : ''}`,
+                  `S/ ${prod.importe.toFixed(2)}`
+                ])
+              ]
+            }
+          },
+
+          { text: '\n' },
+          { text: `Total: S/ ${document.getElementById('totalCompra').innerText}`, fontSize: 14, bold: true, alignment: 'right' },
+          { text: '\n' },
+          { text: 'Forma de Pago: Efectivo', fontSize: 12, alignment: 'center' },
+          { text: 'Gracias por su compra', fontSize: 12, alignment: 'center' }
+        ]
+      };
+
+      // Crear y descargar el PDF
+      pdfMake.createPdf(docDefinition).download('boleta.pdf');
+    }
+
+    // Llamada inicial para mostrar campos según el tipo de medida seleccionado
+    mostrarCamposDinamicos();
+  </script>
+
+  <!-- Scripts de Bootstrap -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
