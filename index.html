@@ -294,13 +294,14 @@
     }
 
    function generarPDF() {
+     const fecha = new Date().toLocaleString().replace(/[^\w\s]/gi, '-'); // Remover caracteres no válidos en el nombre del archivo
+          const numeroFactura = "01"; // Puedes hacer este número dinámico si es necesario
+      const nombreArchivo = `boleta_factura_${numeroFactura}_${fecha}.pdf`;
   const docDefinition = {
     content: [
       // Encabezado de la tienda
       { text: 'Bodega', fontSize: 16, bold: true, alignment: 'center' },
       { text: 'Sullana-Piura', fontSize: 12, alignment: 'center' },
-      { text: 'Tel: 312 888 0719', fontSize: 12, alignment: 'center' },
-      { text: 'NIT: 1128480388', fontSize: 12, alignment: 'center' },
 
       // Separador
       { text: '--------------------------------------------------', alignment: 'center' },
@@ -308,7 +309,6 @@
       // Información de la factura
       { text: `Factura #: 01`, fontSize: 12, bold: true, alignment: 'center' },
       { text: `Fecha: ${new Date().toLocaleString()}`, fontSize: 12, alignment: 'center' },
-      { text: 'Caja: 1', fontSize: 12, alignment: 'center' },
       { text: 'Cajero: Clara', fontSize: 12, alignment: 'center' },
 
       // Espaciado
@@ -349,10 +349,6 @@
       // Espaciado
       { text: '\n' },
 
- 
-
-      // Política de devolución
-      { text: '*** Precios de productos incluyen impuestos. Para poder realizar un reclamo o devolución debe presentar este ticket. ***', fontSize: 10, alignment: 'center' },
 
       // Separador final
       { text: '--------------------------------------------------', alignment: 'center' }
@@ -365,12 +361,12 @@
     },
     
     pageSize: 'A6', // Tamaño adecuado para un ticket
-    pageMargins: [10, 20, 10, 20] // Márgenes adecuados
+    pageMargins: [5, 10, 5, 10] // Márgenes más pequeños para aprovechar el espacio
   };
 
   // Crear y descargar el PDF
-  pdfMake.createPdf(docDefinition).download('boleta.pdf');
-}
+ pdfMake.createPdf(docDefinition).download(nombreArchivo);
+    }
   </script>
 
 </body>
